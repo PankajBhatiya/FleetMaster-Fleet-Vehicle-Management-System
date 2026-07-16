@@ -1,0 +1,14 @@
+{
+  "name": "fleetmaster",
+  "private": true,
+  "scripts": {
+    "start": "concurrently --kill-others-on-fail --names api,web --prefix-colors blue,green \"npm --prefix Backend start\" \"npm --prefix Frontend run dev\"",
+    "dev": "npm run start",
+    "start:backend": "npm --prefix Backend start",
+    "start:frontend": "npm --prefix Frontend run dev",
+    "build": "npm --prefix Frontend run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
