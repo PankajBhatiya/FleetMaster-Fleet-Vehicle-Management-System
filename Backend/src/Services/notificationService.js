@@ -1,4 +1,4 @@
-import Notification from '../models/Notification.js';
+import Notification from '../Models/Notification.js';
 
 // Dispatch a notification
 export const dispatchNotification = async ({ 
