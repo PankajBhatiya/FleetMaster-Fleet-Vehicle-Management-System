@@ -50,6 +50,13 @@ export const getExpenseById = asyncHandler(async (req, res, next) => {
     return res.status(404).json({ success: false, message: 'Expense not found' });
   }
 
+  if (req.user.role === 'driver') {
+    const driverProfile = await Driver.findOne({ name: req.user._id });
+    if (!driverProfile || expense.driver._id.toString() !== driverProfile._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view this expense' });
+    }
+  }
+
   res.status(200).json({ success: true, data: expense });
 });
 
@@ -82,6 +89,9 @@ export const createExpense = asyncHandler(async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Driver profile ID is required' });
     }
   } else {
+    if (req.user.role === 'driver') {
+      return res.status(403).json({ success: false, message: 'Drivers cannot create expenses for other drivers' });
+    }
     // Validate driver exists
     const targetDriver = await Driver.findById(driverId);
     if (!targetDriver) {
@@ -131,7 +141,12 @@ export const updateExpense = asyncHandler(async (req, res, next) => {
     }
   }
 
-  expense = await Expense.findByIdAndUpdate(req.params.id, req.body, {
+  const allowedFields = {};
+  for (const key of ['vehicle', 'driver', 'fuelLiters', 'fuelCost', 'miscExpense', 'expenseDate', 'receiptUrl', 'trip']) {
+    if (key in req.body) allowedFields[key] = req.body[key];
+  }
+
+  expense = await Expense.findByIdAndUpdate(req.params.id, allowedFields, {
     returnDocument: 'after',
     runValidators: true,
   });

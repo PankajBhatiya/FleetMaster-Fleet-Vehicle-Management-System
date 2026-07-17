@@ -21,7 +21,16 @@ export const createVehicle = asyncHandler(async (req, res, next) => {
     return res.status(400).json({ success: false, message: 'Vehicle number already exists' });
   }
 
-  const vehicle = await Vehicle.create(req.body);
+  const { type, capacity, fuelStatus, maintenanceStatus, availability } = req.body;
+  const vehicle = await Vehicle.create({
+    vehicleNumber,
+    type,
+    capacity,
+    fuelStatus,
+    maintenanceStatus,
+    availability,
+    assignedDriver: assignedDriverUserId || null,
+  });
 
   // ── Bidirectional sync on creation ─────────────────────────────────────────
   // If a driver was assigned at creation time, sync the Driver document too.
@@ -134,7 +143,12 @@ export const updateVehicle = asyncHandler(async (req, res, next) => {
   }
   // ──────────────────────────────────────────────────────────────────────────
 
-  vehicle = await Vehicle.findByIdAndUpdate(req.params.id, req.body, {
+  const allowedFields = {};
+  for (const key of ['vehicleNumber', 'type', 'capacity', 'fuelStatus', 'maintenanceStatus', 'availability', 'assignedDriver']) {
+    if (key in req.body) allowedFields[key] = req.body[key];
+  }
+
+  vehicle = await Vehicle.findByIdAndUpdate(req.params.id, allowedFields, {
     returnDocument: 'after',
     runValidators: true,
   });

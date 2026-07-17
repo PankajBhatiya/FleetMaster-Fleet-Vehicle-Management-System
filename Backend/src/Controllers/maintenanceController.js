@@ -34,6 +34,10 @@ export const getMaintenanceRecordById = asyncHandler(async (req, res, next) => {
     return res.status(404).json({ success: false, message: 'Maintenance record not found' });
   }
 
+  if (req.user.role === 'mechanic' && record.performedBy?._id.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ success: false, message: 'Not authorized to view this maintenance record' });
+  }
+
   res.status(200).json({ success: true, data: record });
 });
 
@@ -88,7 +92,12 @@ export const updateMaintenanceRecord = asyncHandler(async (req, res, next) => {
 
   const oldStatus = record.status;
   
-  record = await Maintenance.findByIdAndUpdate(req.params.id, req.body, {
+  const allowedFields = {};
+  for (const key of ['vehicle', 'type', 'scheduledDate', 'cost', 'description', 'priority', 'status']) {
+    if (key in req.body) allowedFields[key] = req.body[key];
+  }
+
+  record = await Maintenance.findByIdAndUpdate(req.params.id, allowedFields, {
     returnDocument: 'after',
     runValidators: true,
   });

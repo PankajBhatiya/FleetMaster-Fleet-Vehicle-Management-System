@@ -2,14 +2,13 @@ import jwt from 'jsonwebtoken';
 import { asyncHandler } from '../Middlewares/errorHandler.js';
 import User from '../Models/User.js';
 import Driver from '../Models/Driver.js';
-// Import BOTH generator functions directly from your utility file
 import { generateToken, generateRefreshToken } from '../Utils/genreateTokens.js'; 
 
 // @desc    Register a new user (and Driver profile if role is 'Driver')
 // @route   POST /api/auth/register
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password, role, phone, licenseNumber, experience } = req.body;
-  const requestedRole = ['driver', 'mechanic'].includes(role) ? role : 'driver';
+  const { name, email, password, phone, licenseNumber, experience } = req.body;
+  const requestedRole = 'driver';
 
   const userExists = await User.findOne({ email });
   if (userExists) {
@@ -146,21 +145,23 @@ export const refresh = asyncHandler(async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(
-      refreshToken,
-      process.env.JWT_REFRESH_SECRET || 'fleetflow_jwt_refresh_secret_key_2026_super_secure'
-    );
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
     if (decoded.id !== user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Invalid token payload' });
     }
 
-    // Using your pre-existing token generator to issue a new access token
+    // Rotate: invalidate the old refresh token and issue a new one
+    user.refreshTokens = user.refreshTokens.filter((token) => token !== refreshToken);
+    const newRefreshToken = generateRefreshToken(user._id);
+    user.refreshTokens.push(newRefreshToken);
+    await user.save();
+
     const newAccessToken = generateToken(user._id);
     return res.status(200).json({
       success: true,
       message: 'Token refreshed successfully',
-      data: { accessToken: newAccessToken },
+      data: { accessToken: newAccessToken, refreshToken: newRefreshToken },
     });
   } catch (err) {
     user.refreshTokens = user.refreshTokens.filter((token) => token !== refreshToken);
@@ -189,84 +190,6 @@ export const getMe = asyncHandler(async (req, res) => {
     message: 'User profile retrieved successfully',
     data: profile,
   });
-});
-
-// @desc    Google OAuth Login
-// @route   POST /api/auth/google-login
-export const googleLogin = asyncHandler(async (req, res) => {
-  const { idToken } = req.body;
-
-  if (!idToken) {
-    return res.status(400).json({ success: false, message: 'Google idToken is required' });
-  }
-
-  try {
-    let payload;
-    if (idToken === 'mock_google_token_bypass') {
-      payload = {
-        email: 'simulated.google.driver@fleetflow.com',
-        name: 'Simulated Google Driver',
-        picture: '',
-      };
-    } else {
-      const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
-      payload = await response.json();
-      if (payload.error_description || !payload.email) {
-        return res.status(400).json({ success: false, message: 'Google authentication token validation failed' });
-      }
-    }
-
-    const email = payload.email.toLowerCase();
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      const randomPassword = Math.random().toString(36).slice(-10);
-      user = await User.create({
-        name: payload.name || 'Google User',
-        email,
-        password: randomPassword,
-        role: 'driver',
-        phone: '+1 (555) 000-0000',
-      });
-
-      const randomLicense = 'CDL-GGL-' + Math.floor(10000 + Math.random() * 90000);
-      await Driver.create({
-        name: user._id,
-        licenseNumber: randomLicense,
-        experience: 1,
-        status: 'Available',
-      });
-    }
-
-    if (user.status === 'inactive') {
-      return res.status(403).json({ success: false, message: 'Your user profile has been deactivated' });
-    }
-
-    // Using your pre-existing token generators
-    const accessToken = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
-
-    user.refreshTokens.push(refreshToken);
-    await user.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Google sign-in successful',
-      data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          phone: user.phone,
-        },
-        accessToken,
-        refreshToken,
-      },
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: `Google auth server communication failed: ${error.message}` });
-  }
 });
 
 // @desc    Update user profile (including avatar)

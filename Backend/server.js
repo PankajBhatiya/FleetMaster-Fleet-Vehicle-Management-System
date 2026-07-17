@@ -21,6 +21,11 @@ const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const JSON_LIMIT = process.env.JSON_LIMIT || '10mb';
 
+if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+  console.error('FATAL: JWT_SECRET and JWT_REFRESH_SECRET must be set in environment');
+  process.exit(1);
+}
+
 if (process.env.NODE_ENV !== 'production') {
   dns.setServers(['8.8.8.8', '8.8.4.4']);
 }

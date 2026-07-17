@@ -25,10 +25,7 @@ export const protect = asyncHandler(async (req, res, next) => {
 
   try {
     // 3. Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'fleetflow_jwt_secret_key_2026_super_secure'
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // 4. Get user from database (excluding password for security)
     const user = await User.findById(decoded.id);
