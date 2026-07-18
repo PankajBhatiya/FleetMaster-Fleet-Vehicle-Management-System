@@ -21,7 +21,6 @@ export default function VehiclesPage() {
     capacity: '',
     fuelStatus: 100,
     maintenanceStatus: 'Satisfactory',
-    availability: true,
     assignedDriver: '',
   });
 
@@ -30,7 +29,7 @@ export default function VehiclesPage() {
       setLoading(true);
       const vehicleList = await vehicleService.getVehicles();
       setVehicles(vehicleList);
-      
+
       const driverList = await driverService.getDrivers();
       setDrivers(driverList);
     } catch (err) {
@@ -59,7 +58,6 @@ export default function VehiclesPage() {
       capacity: '',
       fuelStatus: 100,
       maintenanceStatus: 'Satisfactory',
-      availability: true,
       assignedDriver: '',
     });
     setIsEditing(false);
@@ -73,7 +71,6 @@ export default function VehiclesPage() {
       capacity: v.capacity,
       fuelStatus: v.fuelStatus || 100,
       maintenanceStatus: v.maintenanceStatus || 'Satisfactory',
-      availability: v.availability !== undefined ? v.availability : true,
       assignedDriver: v.assignedDriver ? v.assignedDriver._id : '',
     });
     setCurrentId(v._id);
@@ -153,7 +150,7 @@ export default function VehiclesPage() {
       </div>
 
       {error && <div className="bg-red-950/40 border border-red-800/40 text-red-500 p-4 rounded-lg text-sm">{error}</div>}
-      {success && <div className="bg-emerald-950/40 border border-emerald-800/40 text-emerald-400 p-4 rounded-lg text-sm">{success}</div>}
+      {success && <div className="bg-emerald-950/40 border border-emerald-800/40 text-black p-4 rounded-lg text-sm">{success}</div>}
 
       <div className="relative rounded-lg border border-slate-200 bg-white shadow-sm">
         <FaMagnifyingGlass className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -186,7 +183,7 @@ export default function VehiclesPage() {
             <tbody className="divide-y divide-zinc-850 text-sm">
               {filteredVehicles.map((v) => (
                 <tr key={v._id} className="hover:bg-zinc-900/30 transition-colors">
-                  <td className="p-4 font-mono font-semibold text-emerald-400">{v.vehicleNumber}</td>
+                  <td className="p-4 font-mono font-semibold text-black">{v.vehicleNumber}</td>
                   <td className="p-4">{v.type}</td>
                   <td className="p-4">{v.capacity.toLocaleString()}</td>
                   <td className="p-4">
@@ -202,13 +199,12 @@ export default function VehiclesPage() {
                   </td>
                   <td className="p-4">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        v.maintenanceStatus === 'Satisfactory'
-                          ? 'bg-emerald-950/30 text-emerald-400 border-emerald-900/40'
-                          : v.maintenanceStatus === 'Service Due'
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${v.maintenanceStatus === 'Satisfactory'
+                        ? 'bg-emerald-950/30 text-black border-emerald-900/40'
+                        : v.maintenanceStatus === 'Service Due'
                           ? 'bg-yellow-950/30 text-yellow-400 border-yellow-900/40'
                           : 'bg-red-950/30 text-red-400 border-red-900/40'
-                      }`}
+                        }`}
                     >
                       {v.maintenanceStatus}
                     </span>
@@ -223,7 +219,7 @@ export default function VehiclesPage() {
                   <td className="p-4 text-right space-x-2">
                     <button
                       onClick={() => handleOpenEdit(v)}
-                      className="text-zinc-300 hover:text-emerald-400 font-semibold text-xs border border-zinc-700 hover:border-emerald-500/40 rounded px-2.5 py-1 transition-colors cursor-pointer"
+                      className="text-zinc-300 hover:text-black font-semibold text-xs border border-zinc-700 hover:border-emerald-500/40 rounded px-2.5 py-1 transition-colors cursor-pointer"
                     >
                       Edit
                     </button>
@@ -340,24 +336,18 @@ export default function VehiclesPage() {
                   className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-2.5 text-sm focus:outline-none focus:border-emerald-500"
                 >
                   <option value="">Unassigned</option>
-                  {drivers.map((d) => (
-                    <option key={d._id} value={d.name?._id || d._id}>
-                      {d.name?.name || 'Unknown Driver'} ({d.licenseNumber})
-                    </option>
-                  ))}
+                  {drivers
+                    .filter((d) => {
+                      const isFree = !d.assignedVehicle;
+                      const isCurrentDriver = isEditing && (d.user?._id || d._id) === formData.assignedDriver;
+                      return isFree || isCurrentDriver;
+                    })
+                    .map((d) => (
+                      <option key={d._id} value={d.user?._id || d._id}>
+                        {d.user?.name || 'Unknown Driver'} ({d.licenseNumber})
+                      </option>
+                    ))}
                 </select>
-              </div>
-
-              <div className="flex items-center gap-2 py-2">
-                <input
-                  type="checkbox"
-                  id="availability"
-                  name="availability"
-                  checked={formData.availability}
-                  onChange={handleChange}
-                  className="h-4 w-4 accent-emerald-500 rounded border-zinc-700"
-                />
-                <label htmlFor="availability" className="text-sm font-medium">Available for active deployments</label>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
